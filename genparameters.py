@@ -110,7 +110,7 @@ def extract_nodes(data):
 def analyze_workflow(raw_data):
     """
     Parse ComfyUI workflow metadata and extract key information
-    Returns: dict with positives, negatives, loras, models
+    Senza farsi fregare dallo zero (Zero-Safe Version)
     """
     nodes = extract_nodes(raw_data)
     
@@ -122,7 +122,6 @@ def analyze_workflow(raw_data):
     loras = []
     models = []
     
-    # Iterate through nodes
     for node_id, node in nodes.items():
         if not isinstance(node, dict):
             continue
@@ -131,21 +130,33 @@ def analyze_workflow(raw_data):
         inputs = node.get("inputs", {})
         title = node.get("_meta", {}).get("title", "").lower()
         
-        # Extract Prompts (Positive and Negative)
+        # Estrazione Prompts
         if class_type == "CLIPTextEncode":
             text = inputs.get("text", "")
             if text:
-                if "negative" in title or "negative" in node_id.lower():
+                if "negative" in title or "negative" in str(node_id).lower():
                     negatives.append(text)
                 else:
                     positives.append(text)
         
-        # Extract LoRAs
+        # Estrazione LoRAs (LA CURA)
         if "lora_name" in inputs:
-            strength = inputs.get("strength_model") or inputs.get("strength") or "1.0"
+            # Cerchiamo il valore del peso
+            s_model = inputs.get("strength_model")
+            s_clip = inputs.get("strength")
+            
+            # LOGICA RIGIDA: Se s_model esiste (anche se è 0.0), usalo. 
+            # Se no prova s_clip. Se no metti 1.0.
+            if s_model is not None:
+                strength = s_model
+            elif s_clip is not None:
+                strength = s_clip
+            else:
+                strength = "1.0"
+                
             loras.append(f"{inputs['lora_name']} (Weight: {strength})")
         
-        # Extract Models (GGUF, Checkpoints, etc)
+        # Estrazione Modelli
         if "unet_name" in inputs:
             models.append(inputs["unet_name"])
         elif "ckpt_name" in inputs:
